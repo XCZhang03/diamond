@@ -12,7 +12,7 @@ from torch.utils.data import Dataset as TorchDataset
 
 from .episode import Episode
 from .segment import Segment, SegmentId
-from .utils import make_segment
+from .utils import make_segment, get_pad_segment
 from utils import StateDictMixin
 
 
@@ -57,7 +57,7 @@ class Dataset(StateDictMixin, TorchDataset):
             segment_id_full_res = SegmentId(episode.info["original_file_id"], segment_id.start, segment_id.stop)
             segment.info["full_res"] = self._dataset_full_res[segment_id_full_res].obs
         elif "full_res" in segment.info:
-            segment.info["full_res"] = segment.info["full_res"][segment_id.start:segment_id.stop]
+            segment.info["full_res"] = get_pad_segment(segment.info["full_res"], segment_id)
         return segment
         
     def __str__(self) -> str:
@@ -152,7 +152,7 @@ class Dataset(StateDictMixin, TorchDataset):
 
     def load_from_default_path(self) -> None:
         if self._default_path.is_file():
-            self.load_state_dict(torch.load(self._default_path))
+            self.load_state_dict(torch.load(self._default_path, weights_only=False))
 
 
 class CSGOHdf5Dataset(StateDictMixin, TorchDataset):

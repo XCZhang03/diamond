@@ -24,10 +24,12 @@ def main(cfg: DictConfig) -> None:
         run(cfg, root_dir)
     else:
         mp.spawn(main_ddp, args=(world_size, cfg, root_dir), nprocs=world_size)
+        # main_ddp(cfg=cfg, root_dir=root_dir)
 
 
-def main_ddp(rank: int, world_size: int, cfg: DictConfig, root_dir: Path) -> None:
+def main_ddp(rank: int=None, world_size: int=None, cfg: DictConfig=None, root_dir: Path=None) -> None:
     setup_ddp(rank, world_size)
+    # init_process_group(backend="nccl")
     run(cfg, root_dir)
     destroy_process_group()
 
@@ -40,7 +42,7 @@ def run(cfg: DictConfig, root_dir: Path) -> None:
 
 def setup_ddp(rank: int, world_size: int) -> None:
     os.environ["MASTER_ADDR"] = "localhost"
-    os.environ["MASTER_PORT"] = "6006"
+    os.environ["MASTER_PORT"] = "12355"
     init_process_group(backend="nccl", rank=rank, world_size=world_size)
 
 

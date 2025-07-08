@@ -8,6 +8,8 @@ from .batch import Batch
 from .episode import Episode
 from .segment import Segment, SegmentId
 
+from copy import deepcopy
+
 
 def collate_segments_to_batch(segments: List[Segment]) -> Batch:
     attrs = ("obs", "act", "rew", "end", "trunc", "mask_padding")
@@ -36,10 +38,26 @@ def make_segment(episode: Episode, segment_id: SegmentId, should_pad: bool = Tru
         pad(episode.end[start:stop]),
         pad(episode.trunc[start:stop]),
         mask_padding,
-        info=episode.info,
+        info=deepcopy(episode.info),
         id=SegmentId(segment_id.episode_id, start, stop),
     )
 
+def get_pad_segment(obs, segment_id: SegmentId) -> torch.Tensor:
+    length = obs.size(0)
+    assert segment_id.start < length and segment_id.stop > 0 and segment_id.start < segment_id.stop
+    pad_len_right = max(0, segment_id.stop - length)
+    pad_len_left = max(0, -segment_id.start)
+
+    start = max(0, segment_id.start)
+    stop = min(length, segment_id.stop)
+    mask_padding = torch.cat((torch.zeros(pad_len_left), torch.ones(stop - start), torch.zeros(pad_len_right))).bool()
+
+    def pad(x):
+        right = F.pad(x, [0 for _ in range(2 * x.ndim - 1)] + [pad_len_right]) if pad_len_right > 0 else x
+        return F.pad(right, [0 for _ in range(2 * x.ndim - 2)] + [pad_len_left, 0]) if pad_len_left > 0 else right
+
+    obs = pad(obs[start:stop])
+    return obs
 
 class DatasetTraverser:
     def __init__(self, dataset, batch_num_samples: int, chunk_size: int) -> None:
@@ -72,8 +90,9 @@ class DatasetTraverser:
                     SegmentId(episode_id, start, stop),
                     should_pad=True,
                 )
-                segment_id_full_res = SegmentId(episode.info["original_file_id"], start, stop)
-                segment.info["full_res"] = self.dataset._dataset_full_res[segment_id_full_res].obs
+                # segment_id_full_res = SegmentId(episode.info["original_file_id"], start, stop)
+                # segment.info["full_res"] = self.dataset._dataset_full_res[segment_id_full_res].obs
+                segment.info["full_res"] = get_pad_segment(episode.info["full_res"], SegmentId(episode_id, start, stop))
                 chunks.append(segment)
             if chunks[-1].effective_size < 2:
                 chunks.pop()

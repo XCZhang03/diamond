@@ -1,0 +1,7 @@
+train:
+  id: robocasa
+  size: [256, 256]
+num_actions: 12
+path_data_low_res: /datapool/data2/home/linhw/zhangxiangcheng/DiffRL/diamond/dataset/robocassa # TO DEFINE
+path_data_full_res: null # TO DEFINE
+keymap: csgo

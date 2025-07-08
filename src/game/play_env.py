@@ -13,6 +13,8 @@ from csgo.keymap import CSGO_KEYMAP
 from data import Dataset, Episode
 from envs import WorldModelEnv
 
+from PIL import Image
+
 
 NamedEnv = namedtuple("NamedEnv", "name env")
 OneStepData = namedtuple("OneStepData", "obs act rew end trunc")
@@ -38,13 +40,13 @@ class PlayEnv:
         self.env = wm_env
         self.obs, self.t, self.buffer, self.rec_dataset = (None,) * 4
 
-    def print_controls(self) -> None:
-        print("\nEnvironment actions:\n")
-        for key, action_name in self.keymap.items():
-            if key is not None:
-                key_name = pygame.key.name(key)
-                key_name = "⎵" if key_name == "space" else key_name
-                print(f"{key_name} : {action_name}")
+    # def print_controls(self) -> None:
+    #     print("\nEnvironment actions:\n")
+    #     for key, action_name in self.keymap.items():
+    #         if key is not None:
+    #             key_name = pygame.key.name(key)
+    #             key_name = "⎵" if key_name == "space" else key_name
+    #             print(f"{key_name} : {action_name}")
 
     def next_mode(self) -> bool:
         self.switch_controller()
@@ -65,15 +67,15 @@ class PlayEnv:
     def print_env(self) -> None:
         print(f"> Environment: {self.env_name}")
 
-    def str_control(self) -> str:
-        return "human" if self.is_human_player else "replay actions (test dataset)"
+    # def str_control(self) -> str:
+    #     return "human" if self.is_human_player else "replay actions (test dataset)"
 
-    def print_control(self) -> None:
-        print(f"> Control: {self.str_control()}")
+    # def print_control(self) -> None:
+    #     print(f"> Control: {self.str_control()}")
 
-    def switch_controller(self) -> None:
-        self.is_human_player = not self.is_human_player
-        self.print_control()
+    # def switch_controller(self) -> None:
+        # self.is_human_player = not self.is_human_player
+        # self.print_control()
 
     def update_wm_horizon(self, incr: int) -> None:
         self.env.horizon = max(1, self.env.horizon + incr)
@@ -92,31 +94,40 @@ class PlayEnv:
             self.reset_recording()
         return self.obs, None
 
-    @torch.no_grad()
-    def step(self, csgo_action: CSGOAction) -> Tuple[Tensor, Tensor, Tensor, Tensor, Dict[str, Any]]:
-        if self.is_human_player:
-            action = encode_csgo_action(csgo_action, device=self.agent.device)
-        else:
-            action = self.env.next_act[self.t - 1] if self.t > 0 else self.env.act_buffer[0, -1].clone()
-            csgo_action = decode_csgo_action(action.cpu())
-        next_obs, rew, end, trunc, env_info = self.env.step(action)
+    def draw_obs(self, obs: Tensor, obs_low_res: Tensor = None) -> None:
+        assert obs.ndim == 4 and obs.size(0) == 1, "Observation should be a single batch with shape (1, C, H, W)"
+        obs = obs.squeeze(0).add(1).div(2).mul(255).byte().permute(1, 2, 0).cpu().numpy()
+        obs = obs.clip(0, 255).astype("uint8")
+        image = Image.fromarray(obs)
+        return image
 
+    @torch.no_grad()
+    def step(self) -> Tuple[Tensor, Tensor, Tensor, Tensor, Dict[str, Any]]:
+        # if self.is_human_player:
+        #     action = encode_csgo_action(csgo_action, device=self.agent.device)
+        # else:
+        action = self.env.next_act[self.t - 1] if self.t > 0 else self.env.act_buffer[0, -1].clone()
+            # csgo_action = decode_csgo_action(action.cpu())
+        image = self.draw_obs(self.env.obs_full_res_buffer[:, -1])
+        next_obs, rew, end, trunc, env_info = self.env.step(action)
+        image = self.draw_obs(next_obs)
+        image.save(f"obs_{self.t + 1}.png")
         if not self.is_human_player and self.t == self.env.next_act.size(0):
             trunc[0] = 1
 
         data = OneStepData(self.obs, action, rew, end, trunc)
-        keys, mouse, clicks = print_csgo_action(csgo_action)
+        # keys, mouse, clicks = print_csgo_action(csgo_action)
         horizon = self.env.horizon if self.is_human_player else min(self.env.horizon, self.env.next_act.size(0))
         header = [
             [
-                f"Env     : {self.env_name}",
-                f"Control : {self.str_control()}",
+                # f"Env     : {self.env_name}",
+                # f"Control : {self.str_control()}",
                 f"Timestep: {self.t + 1}",
                 f"Horizon : {horizon}",
-                "",
-                f"Keys  : {keys}",
-                f"Mouse : {mouse}",
-                f"Clicks: {clicks}",
+                # "",
+                # f"Keys  : {keys}",
+                # f"Mouse : {mouse}",
+                # f"Clicks: {clicks}",
             ],
         ]
         info = {"header": header}

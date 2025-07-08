@@ -86,11 +86,13 @@ class WorldModelEnv:
         trunc = (self.ep_len >= self.horizon).long()
 
         self.obs_buffer = self.obs_buffer.roll(-1, dims=1)
+        actual_obs = self.obs_buffer[:, -1]
         self.act_buffer = self.act_buffer.roll(-1, dims=1)
         self.obs_buffer[:, -1] = next_obs
 
         if self.sampler_upsampling is not None:
             self.obs_full_res_buffer = self.obs_full_res_buffer.roll(-1, dims=1)
+            actual_obs_full = self.obs_full_res_buffer[:, -1]
             self.obs_full_res_buffer[:, -1] = next_obs_full
 
         info = {}
@@ -101,6 +103,9 @@ class WorldModelEnv:
             info["obs_low_res"] = next_obs
             if self.return_denoising_trajectory:
                 info["denoising_trajectory_upsampling"] = torch.stack(denoising_trajectory_upsampling, dim=1)
+        info['actual_obs'] = actual_obs
+        if self.sampler_upsampling is not None:
+            info['actual_obs_full_res'] = actual_obs_full
 
         obs_to_return = self.obs_buffer[:, -1] if self.sampler_upsampling is None else self.obs_full_res_buffer[:, -1]
         return obs_to_return, rew, end, trunc, info
@@ -141,15 +146,26 @@ class WorldModelEnv:
             obs_, obs_full_res_, act_, next_act_, hx_, cx_ = [], [], [], [], [], []
             for _ in range(num_batches_to_preload):
                 d = next(spawn_dirs)
-                obs = torch.tensor(np.load(d / "low_res.npy"), device=self.device).div(255).mul(2).sub(1).unsqueeze(0)
-                obs_full_res = torch.tensor(np.load(d / "full_res.npy"), device=self.device).div(255).mul(2).sub(1).unsqueeze(0)
-                act = torch.tensor(np.load(d / "act.npy"), dtype=torch.long, device=self.device).unsqueeze(0)
-                next_act = torch.tensor(np.load(d / "next_act.npy"), dtype=torch.long, device=self.device).unsqueeze(0)
-
-                obs_.extend(list(obs))
-                obs_full_res_.extend(list(obs_full_res))
-                act_.extend(list(act))
-                next_act_.extend(list(next_act))
+                files = list(d.iterdir())
+                assert len(files) == 1, f"Expected only one file in {d}, found {len(files)}"
+                file = files[0]
+                sd = torch.load(file, weights_only=False)
+                # obs = torch.tensor(np.load(d / "low_res.npy"), device=self.device).div(255).mul(2).sub(1).unsqueeze(0)
+                # obs_full_res = torch.tensor(np.load(d / "full_res.npy"), device=self.device).div(255).mul(2).sub(1).unsqueeze(0)
+                # act = torch.tensor(np.load(d / "act.npy"), dtype=torch.long, device=self.device).unsqueeze(0)
+                # next_act = torch.tensor(np.load(d / "next_act.npy"), dtype=torch.long, device=self.device).unsqueeze(0)
+                obs = sd["obs"].to(self.device).div(255).mul(2).sub(1)
+                obs_full_res = sd['info']['full_res'].to(self.device)
+                act = sd['act'].to(self.device)
+                next_act = act.clone()[1:]
+                obs = obs.split(4, dim=0)
+                obs_full_res = obs_full_res.split(4, dim=0) if self.sampler_upsampling is not None else None
+                act = act.split(4, dim=0)
+                next_act = next_act.split(4, dim=0) 
+                obs_.extend(list(obs[:-2]))
+                obs_full_res_.extend(list(obs_full_res[:-2])) if obs_full_res is not None else []
+                act_.extend(list(act[:-2]))
+                next_act_.extend(list(next_act[:-2]))
 
                 if self.rew_end_model is not None:
                     with torch.no_grad():

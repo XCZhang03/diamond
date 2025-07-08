@@ -27,7 +27,7 @@ class InnerModel(nn.Module):
         self.noise_emb = FourierFeatures(cfg.cond_channels)
         self.noise_cond_emb = FourierFeatures(cfg.cond_channels)
         self.act_emb = None if cfg.is_upsampler else nn.Sequential(
-            nn.Embedding(cfg.num_actions, cfg.cond_channels // cfg.num_steps_conditioning),
+            nn.Linear(cfg.num_actions, cfg.cond_channels // cfg.num_steps_conditioning),
             nn.Flatten(),  # b t e -> b (t e)
         )
         self.cond_proj = nn.Sequential(
@@ -45,8 +45,11 @@ class InnerModel(nn.Module):
 
     def forward(self, noisy_next_obs: Tensor, c_noise: Tensor, c_noise_cond: Tensor, obs: Tensor, act: Optional[Tensor]) -> Tensor:
         if self.act_emb is not None:
-            assert act.ndim == 2 or (act.ndim == 3 and act.size(2) == self.act_emb[0].num_embeddings and set(act.unique().tolist()).issubset(set([0, 1])))
-            act_emb = self.act_emb(act) if act.ndim == 2 else self.act_emb[1]((act.float() @ self.act_emb[0].weight))
+            # assert act.ndim == 2 or (act.ndim == 3 and act.size(2) == self.act_emb[0].num_embeddings and set(act.unique().tolist()).issubset(set([0, 1])))
+            # act_emb = self.act_emb(act) if act.ndim == 2 else self.act_emb[1]((act.float() @ self.act_emb[0].weight))
+            assert act.shape[-1] == self.act_emb[0].in_features
+            act = act.to(dtype=self.act_emb[0].weight.dtype)
+            act_emb = self.act_emb(act)
         else:
             assert act is None
             act_emb = 0

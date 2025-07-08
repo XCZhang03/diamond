@@ -95,7 +95,7 @@ class Trainer(StateDictMixin):
             dataset_full_res = CSGOHdf5Dataset(Path(cfg.env.path_data_full_res))
         
         # Envs (atari only)
-        else:
+        elif cfg.env.train.id == "atari":
             if self._rank == 0:
                 train_env = make_atari_env(num_envs=cfg.collection.train.num_envs, device=self._device, **cfg.env.train)
                 test_env = make_atari_env(num_envs=cfg.collection.test.num_envs, device=self._device, **cfg.env.test)
@@ -104,6 +104,11 @@ class Trainer(StateDictMixin):
                 num_actions = None
             num_actions, = broadcast_if_needed(num_actions)
             dataset_full_res = None
+        else: # Robocasa
+            assert self._is_static_dataset
+            num_actions = cfg.env.num_actions
+            dataset_full_res = None
+
     
         num_workers = cfg.training.num_workers_data_loaders
         use_manager = cfg.training.cache_in_ram and (num_workers > 0)
@@ -447,7 +452,7 @@ class Trainer(StateDictMixin):
         return to_log
 
     def load_state_checkpoint(self) -> None:
-        self.load_state_dict(torch.load(self._path_state_ckpt, map_location=self._device))
+        self.load_state_dict(torch.load(self._path_state_ckpt, map_location=self._device, weights_only=False))
 
     def save_checkpoint(self) -> None:
         if self._rank == 0:
