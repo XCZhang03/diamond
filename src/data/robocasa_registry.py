@@ -341,7 +341,7 @@ def get_ds_path(task, ds_type, return_info=False):
     #     )
     # else:
     #     ds_base_path = macros.DATASET_BASE_PATH
-    ds_base_path = "/datapool/data2/home/linhw/zhangxiangcheng/DiffRL/robocasa/datasets"
+    ds_base_path = "/n/holylabs/ydu_lab/Lab/zhangxiangcheng/code/robocasa/datasets"
     ds_path = os.path.join(ds_base_path, folder, fname)
 
     if return_info is False:

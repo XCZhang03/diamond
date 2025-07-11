@@ -14,6 +14,7 @@ class Batch:
     rew: torch.FloatTensor
     end: torch.LongTensor
     trunc: torch.LongTensor
+    full_res_obs: torch.ByteTensor
     mask_padding: torch.BoolTensor
     info: List[Dict[str, Any]]
     segment_ids: List[SegmentId]

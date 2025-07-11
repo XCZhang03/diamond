@@ -68,5 +68,5 @@ class BatchSampler(torch.utils.data.Sampler):
                 self.dataset.lengths[episode_ids], timesteps + 1 + np.random.randint(0, self.seq_length, len(timesteps))
             )
             starts = stops - self.seq_length
-
+        
         return [SegmentId(*x) for x in zip(episode_ids, starts, stops)]

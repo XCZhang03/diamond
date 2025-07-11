@@ -103,7 +103,8 @@ class Denoiser(nn.Module):
         seq_length = t - n  # t = n + 1 + num_autoregressive_steps
 
         if self.is_upsampler:
-            all_obs = torch.stack([x["full_res"] for x in batch.info]).to(self.device)
+            # all_obs = torch.stack([x["full_res"] for x in batch.info]).to(self.device)
+            all_obs = batch.full_res_obs
             low_res = F.interpolate(batch.obs.reshape(b * t, c, h, w), scale_factor=self.cfg.upsampling_factor, mode="bicubic").reshape(b, t, c, H, W)
             assert all_obs.shape == low_res.shape
         else:

@@ -41,7 +41,7 @@ def prepare_wm_env(cfg: DictConfig, args: argparse.Namespace) -> PlayEnv:
     # path_ckpt = path_hf / "csgo/model/csgo.pt"
     path_ckpt = Path("outputs/2025-06-28/00-17-57/checkpoints/agent_versions/agent_epoch_00055.pt")
     # spawn_dir = path_hf / "csgo/spawn"
-    spawn_dir = Path("dataset/robocassa/test/000/00")
+    spawn_dir = Path("dataset/robocasa/mg_im/test/0000/000/00")
 
     # Override config
     cfg.agent = OmegaConf.load("config/agent/robocasa.yaml")

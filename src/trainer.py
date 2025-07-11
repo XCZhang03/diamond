@@ -144,7 +144,7 @@ class Trainer(StateDictMixin):
         def build_lr_sched(name: str) -> torch.optim.lr_scheduler.LambdaLR:
             return get_lr_sched(self.opt.get(name), getattr(cfg, name).training.lr_warmup_steps)
 
-        model_names = ["denoiser", "upsampler", "rew_end_model", "actor_critic"]
+        model_names = ["upsampler", "denoiser", "rew_end_model", "actor_critic"]
         self._model_names = ["actor_critic"] if self._is_model_free else [name for name in model_names if getattr(self.agent, name) is not None]
         
         self.opt = CommonTools(**{name: build_opt(name) for name in self._model_names})
@@ -235,7 +235,6 @@ class Trainer(StateDictMixin):
             self.load_state_checkpoint()
         else:
             self.save_checkpoint()
-
         if self._rank == 0:
             for name in self._model_names:
                 print(f"{count_parameters(getattr(self.agent, name))} parameters in {name}")

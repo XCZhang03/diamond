@@ -155,7 +155,7 @@ class WorldModelEnv:
                 # act = torch.tensor(np.load(d / "act.npy"), dtype=torch.long, device=self.device).unsqueeze(0)
                 # next_act = torch.tensor(np.load(d / "next_act.npy"), dtype=torch.long, device=self.device).unsqueeze(0)
                 obs = sd["obs"].to(self.device).div(255).mul(2).sub(1)
-                obs_full_res = sd['info']['full_res'].to(self.device)
+                obs_full_res = sd['full_res_obs'].div(255).mul(2).sub(1).to(self.device)
                 act = sd['act'].to(self.device)
                 next_act = act.clone()[1:]
                 obs = obs.split(4, dim=0)

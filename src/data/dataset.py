@@ -53,11 +53,11 @@ class Dataset(StateDictMixin, TorchDataset):
     def __getitem__(self, segment_id: SegmentId) -> Segment:
         episode = self.load_episode(segment_id.episode_id)
         segment = make_segment(episode, segment_id, should_pad=True)
-        if self._dataset_full_res is not None:
-            segment_id_full_res = SegmentId(episode.info["original_file_id"], segment_id.start, segment_id.stop)
-            segment.info["full_res"] = self._dataset_full_res[segment_id_full_res].obs
-        elif "full_res" in segment.info:
-            segment.info["full_res"] = get_pad_segment(segment.info["full_res"], segment_id)
+        # if self._dataset_full_res is not None:
+        #     segment_id_full_res = SegmentId(episode.info["original_file_id"], segment_id.start, segment_id.stop)
+        #     segment.info["full_res"] = self._dataset_full_res[segment_id_full_res].obs
+        # elif "full_res" in segment.info:
+        #     segment.info["full_res"] = get_pad_segment(segment.info["full_res"], segment_id)
         return segment
         
     def __str__(self) -> str:
@@ -102,7 +102,6 @@ class Dataset(StateDictMixin, TorchDataset):
     def add_episode(self, episode: Episode, *, episode_id: Optional[int] = None) -> int:
         self.assert_not_static()
         episode = episode.to("cpu")
-
         if episode_id is None:
             episode_id = self.num_episodes
             self.start_idx = np.concatenate((self.start_idx, np.array([self.num_steps])))
@@ -132,7 +131,7 @@ class Dataset(StateDictMixin, TorchDataset):
         return episode_id
 
     def _get_episode_path(self, episode_id: int) -> Path:
-        n = 3  # number of hierarchies
+        n = 4  # number of hierarchies
         powers = np.arange(n)
         subfolders = np.floor((episode_id % 10 ** (1 + powers)) / 10**powers) * 10**powers
         subfolders = [int(x) for x in subfolders[::-1]]
